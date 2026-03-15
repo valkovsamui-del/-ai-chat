@@ -199,12 +199,18 @@ function clearChat() {
 function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
 function handleKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} }
 
+const PROXY = 'https://crimson-mud-7e84.val-kov-samui.workers.dev';
+
 async function callAnthropic(sys, msgs) {
   const key = localStorage.getItem('ak')||'';
-  const r = await fetch("https://api.anthropic.com/v1/messages", {
+  const r = await fetch(PROXY, {
     method:"POST",
-    headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01"},
-    body:JSON.stringify({model:"claude-opus-4-6",max_tokens:500,system:sys,messages:msgs})
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      provider:'anthropic',
+      apiKey: key,
+      payload:{model:"claude-opus-4-6",max_tokens:500,system:sys,messages:msgs}
+    })
   });
   const d = await r.json();
   if(d.error) throw new Error(d.error.message);
@@ -212,10 +218,14 @@ async function callAnthropic(sys, msgs) {
 }
 async function callOpenAI(sys, msgs) {
   const key = localStorage.getItem('ok')||'';
-  const r = await fetch("https://api.openai.com/v1/chat/completions", {
+  const r = await fetch(PROXY, {
     method:"POST",
-    headers:{"Content-Type":"application/json","Authorization":`Bearer ${key}`},
-    body:JSON.stringify({model:"gpt-4o-mini",max_tokens:500,messages:[{role:"system",content:sys},...msgs]})
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      provider:'openai',
+      apiKey: key,
+      payload:{model:"gpt-4o-mini",max_tokens:500,messages:[{role:"system",content:sys},...msgs]}
+    })
   });
   const d = await r.json();
   if(d.error) throw new Error(d.error.message);
