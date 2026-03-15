@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="AI Чат">
 <link rel="manifest" href="manifest.json">
-<title>AI Чат: Ты + Claude + GPT</title>
+<title>AI Чат</title>
 <style>
   :root {
     --bg: #f0efe9; --surface: #fff; --surface2: #f5f5f0; --border: #e5e5e0;
@@ -20,6 +20,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; overflow: hidden; background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--text); }
   body { display: flex; flex-direction: column; }
+
   .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: calc(var(--safe-top) + 12px) 16px 12px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
   .topbar-left { display: flex; align-items: center; gap: 10px; }
   .avatars { display: flex; }
@@ -29,8 +30,10 @@
   .topbar-title { font-size: 15px; font-weight: 600; }
   .topbar-sub { font-size: 11px; color: var(--text2); }
   .settings-btn { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface2); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 15px; }
+
   .chat-wrap { flex: 1; overflow-y: auto; padding: 12px 14px; -webkit-overflow-scrolling: touch; }
   .chat { display: flex; flex-direction: column; gap: 8px; }
+
   .msg { display: flex; gap: 8px; max-width: 100%; }
   .msg.me { flex-direction: row-reverse; }
   .m-av { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: #fff; flex-shrink: 0; align-self: flex-end; margin-bottom: 2px; }
@@ -49,15 +52,32 @@
   .err-msg { text-align: center; font-size: 12px; color: #c0392b; background: #fdf2f2; border-radius: 10px; padding: 8px 12px; }
   .empty-state { text-align: center; padding: 50px 20px; color: var(--text2); font-size: 14px; line-height: 1.7; }
   .empty-icon { font-size: 48px; margin-bottom: 14px; }
+
+  /* Bottom bar */
   .bottombar { background: var(--surface); border-top: 1px solid var(--border); padding: 8px 14px calc(var(--safe-bottom) + 8px); flex-shrink: 0; }
-  .mode-row { display: flex; gap: 5px; margin-bottom: 8px; }
-  .mode-btn { flex: 1; padding: 5px 4px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); font-size: 11px; color: var(--text2); cursor: pointer; text-align: center; }
+
+  /* Mode switcher */
+  .mode-row { display: flex; gap: 6px; margin-bottom: 8px; }
+  .mode-btn { flex: 1; padding: 7px 4px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); font-size: 12px; color: var(--text2); cursor: pointer; text-align: center; transition: all 0.15s; }
   .mode-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+
+  /* Chat input */
   .input-row { display: flex; gap: 8px; align-items: flex-end; }
   .msg-input { flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: 22px; font-size: 14px; background: var(--surface2); color: var(--text); outline: none; resize: none; max-height: 100px; line-height: 1.4; font-family: inherit; }
   .msg-input:focus { border-color: #378ADD; background: #fff; }
   .send-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: #1a1a1a; color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .send-btn:disabled { background: var(--border); }
+
+  /* Auto debate controls */
+  .debate-row { display: flex; gap: 8px; align-items: center; }
+  .debate-input { flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: 22px; font-size: 14px; background: var(--surface2); color: var(--text); outline: none; font-family: inherit; }
+  .debate-input:focus { border-color: #378ADD; background: #fff; }
+  .rounds-sel { padding: 10px 8px; border: 1px solid var(--border); border-radius: 12px; font-size: 13px; background: var(--surface2); color: var(--text); width: 70px; }
+  .debate-btn { height: 40px; padding: 0 16px; border-radius: 22px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .debate-start { background: #1a1a1a; color: #fff; }
+  .debate-stop { background: #c0392b; color: #fff; display: none; }
+
+  /* Settings modal */
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; display: none; align-items: flex-end; }
   .overlay.open { display: flex; }
   .modal { background: var(--surface); border-radius: 20px 20px 0 0; width: 100%; max-height: 80vh; overflow-y: auto; padding-bottom: calc(var(--safe-bottom) + 16px); }
@@ -71,12 +91,13 @@
   .tab-sw button { flex: 1; padding: 7px; text-align: center; border-radius: 8px; font-size: 13px; cursor: pointer; border: none; background: none; color: var(--text2); }
   .tab-sw button.active { background: var(--surface); color: var(--text); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
   .save-btn { width: 100%; padding: 13px; border-radius: 12px; border: none; background: #1a1a1a; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .clear-btn { width: 100%; padding: 11px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface2); color: #c0392b; font-size: 14px; cursor: pointer; }
   .note { font-size: 12px; color: var(--text3); line-height: 1.5; }
   .key-link { color: #378ADD; }
-  .clear-btn { width: 100%; padding: 11px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface2); color: #c0392b; font-size: 14px; cursor: pointer; }
 </style>
 </head>
 <body>
+
 <div class="topbar">
   <div class="topbar-left">
     <div class="avatars">
@@ -86,7 +107,7 @@
     </div>
     <div>
       <div class="topbar-title">AI Чат</div>
-      <div class="topbar-sub">Ты + Claude + GPT</div>
+      <div class="topbar-sub" id="topbarSub">Ты + Claude + GPT</div>
     </div>
   </div>
   <div class="settings-btn" onclick="openSettings()">⚙️</div>
@@ -96,27 +117,50 @@
   <div class="chat" id="chat">
     <div class="empty-state">
       <div class="empty-icon">🤝</div>
-      Напиши любое сообщение — Claude и GPT ответят тебе.<br><br>
-      <b>Авто</b> — оба отвечают на каждое сообщение<br>
-      <b>Claude / GPT</b> — только один отвечает<br><br>
-      <span style="color:var(--text3);font-size:12px;">Сначала добавь API ключ в ⚙️</span>
+      <b>Чат</b> — ты пишешь, Claude и GPT отвечают<br><br>
+      <b>Дебаты</b> — они спорят между собой,<br>ты можешь вмешаться в любой момент<br><br>
+      <span style="color:var(--text3);font-size:12px;">Сначала добавь API ключи в ⚙️</span>
     </div>
   </div>
 </div>
 
-<div class="bottombar">
+<div class="bottombar" id="bottombar">
+  <!-- Mode switcher -->
   <div class="mode-row">
-    <div class="mode-btn active" id="modeAuto" onclick="setMode('auto')">🤖 Авто</div>
-    <div class="mode-btn" id="modeClaude" onclick="setMode('claude')">Claude</div>
-    <div class="mode-btn" id="modeGpt" onclick="setMode('gpt')">GPT</div>
+    <div class="mode-btn active" id="modeChat" onclick="setMode('chat')">💬 Чат</div>
+    <div class="mode-btn" id="modeDebate" onclick="setMode('debate')">⚔️ Дебаты</div>
   </div>
-  <div class="input-row">
-    <textarea class="msg-input" id="msgInput" placeholder="Напиши сообщение..." rows="1"
-      onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-    <button class="send-btn" id="sendBtn" onclick="sendMessage()">↑</button>
+
+  <!-- Chat input -->
+  <div id="chatInput">
+    <div class="input-row">
+      <textarea class="msg-input" id="msgInput" placeholder="Напиши сообщение..." rows="1"
+        onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">↑</button>
+    </div>
+  </div>
+
+  <!-- Debate input -->
+  <div id="debateInput" style="display:none">
+    <div class="debate-row">
+      <input class="debate-input" id="debateTopic" placeholder="Тема для дебатов..." value="Что важнее: ИИ или человеческие связи?">
+      <select class="rounds-sel" id="rounds">
+        <option value="2">2</option>
+        <option value="3" selected>3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="10">10</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="debate-btn debate-start" id="debateStartBtn" onclick="startDebate()">▶ Начать дебаты</button>
+      <button class="debate-btn debate-stop" id="debateStopBtn" onclick="stopDebate()">◼ Стоп</button>
+      <button class="debate-btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);" onclick="joinDebate()">✍️ Вмешаться</button>
+    </div>
   </div>
 </div>
 
+<!-- Settings -->
 <div class="overlay" id="overlay" onclick="closeOutside(event)">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -128,21 +172,29 @@
       </div>
       <div id="panelA">
         <div class="field">
-          <label>Anthropic API Key</label>
+          <label>Anthropic API Key (для Claude)</label>
           <input type="password" id="anthropicKey" placeholder="sk-ant-...">
         </div>
         <div class="note">Ключ: <a class="key-link" href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> → API Keys</div>
       </div>
       <div id="panelO" style="display:none">
         <div class="field">
-          <label>OpenAI API Key</label>
+          <label>OpenAI API Key (для GPT)</label>
           <input type="password" id="openaiKey" placeholder="sk-...">
         </div>
         <div class="note">Ключ: <a class="key-link" href="https://platform.openai.com" target="_blank">platform.openai.com</a> → API Keys</div>
       </div>
       <div class="field">
-        <label>Твоё имя (как обращаться ИИ)</label>
+        <label>Твоё имя</label>
         <input type="text" id="userName" placeholder="Например: Роман">
+      </div>
+      <div class="field">
+        <label>API для обоих участников</label>
+        <div class="tab-sw" style="margin-top:4px;">
+          <button id="provA" onclick="setProv('anthropic')">Anthropic</button>
+          <button id="provO" onclick="setProv('openai')">OpenAI</button>
+        </div>
+        <div class="note" style="margin-top:6px;">Anthropic = оба через Claude API. OpenAI = оба через GPT API.</div>
       </div>
       <button class="save-btn" onclick="saveSettings()">Сохранить</button>
       <button class="clear-btn" onclick="clearChat()">Очистить чат</button>
@@ -151,151 +203,203 @@
 </div>
 
 <script>
-let mode = 'auto';
+const PROXY = 'https://crimson-mud-7e84.val-kov-samui.workers.dev';
+let mode = 'chat';
 let provider = 'anthropic';
 let busy = false;
+let debating = false;
+let stopFlag = false;
 let claudeHistory = [];
 let gptHistory = [];
 
 window.addEventListener('load', () => {
-  const ak = localStorage.getItem('ak') || '';
-  const ok = localStorage.getItem('ok') || '';
-  const un = localStorage.getItem('un') || '';
-  const pv = localStorage.getItem('pv') || 'anthropic';
+  const ak = localStorage.getItem('ak')||'';
+  const ok = localStorage.getItem('ok')||'';
+  const un = localStorage.getItem('un')||'';
+  const pv = localStorage.getItem('pv')||'anthropic';
   if (ak) document.getElementById('anthropicKey').value = ak;
   if (ok) document.getElementById('openaiKey').value = ok;
   if (un) { document.getElementById('userName').value = un; document.getElementById('userAvatar').textContent = un.charAt(0).toUpperCase(); }
-  provider = pv; switchTab(pv);
+  provider = pv;
+  switchTab(pv); setProv(pv);
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 });
 
 function setMode(m) {
   mode = m;
-  ['Auto','Claude','Gpt'].forEach(x => document.getElementById('mode'+x).classList.toggle('active', x.toLowerCase()===m));
+  document.getElementById('modeChat').classList.toggle('active', m==='chat');
+  document.getElementById('modeDebate').classList.toggle('active', m==='debate');
+  document.getElementById('chatInput').style.display = m==='chat' ? 'block' : 'none';
+  document.getElementById('debateInput').style.display = m==='debate' ? 'block' : 'none';
+  document.getElementById('topbarSub').textContent = m==='chat' ? 'Ты + Claude + GPT' : 'Claude vs GPT';
 }
+
 function switchTab(t) {
-  provider = t;
   document.getElementById('panelA').style.display = t==='anthropic'?'block':'none';
   document.getElementById('panelO').style.display = t==='openai'?'block':'none';
   document.getElementById('tabA').classList.toggle('active', t==='anthropic');
   document.getElementById('tabO').classList.toggle('active', t==='openai');
 }
+function setProv(p) {
+  provider = p;
+  document.getElementById('provA').classList.toggle('active', p==='anthropic');
+  document.getElementById('provO').classList.toggle('active', p==='openai');
+}
 function openSettings() { document.getElementById('overlay').classList.add('open'); }
-function closeOutside(e) { if (e.target===document.getElementById('overlay')) document.getElementById('overlay').classList.remove('open'); }
+function closeOutside(e) { if(e.target===document.getElementById('overlay')) document.getElementById('overlay').classList.remove('open'); }
 function saveSettings() {
   localStorage.setItem('ak', document.getElementById('anthropicKey').value.trim());
   localStorage.setItem('ok', document.getElementById('openaiKey').value.trim());
   const un = document.getElementById('userName').value.trim();
   localStorage.setItem('un', un);
   localStorage.setItem('pv', provider);
-  if (un) document.getElementById('userAvatar').textContent = un.charAt(0).toUpperCase();
+  if(un) document.getElementById('userAvatar').textContent = un.charAt(0).toUpperCase();
   document.getElementById('overlay').classList.remove('open');
 }
 function clearChat() {
-  claudeHistory = []; gptHistory = [];
-  document.getElementById('chat').innerHTML = '<div class="system-msg">Чат очищен</div>';
+  claudeHistory=[]; gptHistory=[];
+  document.getElementById('chat').innerHTML='<div class="system-msg">Чат очищен</div>';
   document.getElementById('overlay').classList.remove('open');
 }
 function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
 function handleKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} }
 
-const PROXY = 'https://crimson-mud-7e84.val-kov-samui.workers.dev';
-
-async function callAnthropic(sys, msgs) {
-  const key = localStorage.getItem('ak')||'';
-  const r = await fetch(PROXY, {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      provider:'anthropic',
-      apiKey: key,
-      payload:{model:"claude-opus-4-6",max_tokens:500,system:sys,messages:msgs}
-    })
-  });
-  const d = await r.json();
-  if(d.error) throw new Error(d.error.message);
-  return d.content[0].text.trim();
+function getKey() {
+  const pv = localStorage.getItem('pv')||'anthropic';
+  return pv==='anthropic' ? localStorage.getItem('ak')||'' : localStorage.getItem('ok')||'';
 }
-async function callOpenAI(sys, msgs) {
-  const key = localStorage.getItem('ok')||'';
-  const r = await fetch(PROXY, {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      provider:'openai',
-      apiKey: key,
-      payload:{model:"gpt-4o-mini",max_tokens:500,messages:[{role:"system",content:sys},...msgs]}
-    })
-  });
-  const d = await r.json();
-  if(d.error) throw new Error(d.error.message);
-  return d.choices[0].message.content.trim();
+
+async function callAPI(sys, msgs) {
+  const pv = localStorage.getItem('pv')||'anthropic';
+  const key = getKey();
+  if(!key) { openSettings(); throw new Error('Нет API ключа'); }
+
+  if(pv==='anthropic') {
+    const r = await fetch(PROXY, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ provider:'anthropic', apiKey:key, payload:{model:'claude-opus-4-6',max_tokens:500,system:sys,messages:msgs} })
+    });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error.message);
+    return d.content[0].text.trim();
+  } else {
+    const r = await fetch(PROXY, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ provider:'openai', apiKey:key, payload:{model:'gpt-4o-mini',max_tokens:500,messages:[{role:'system',content:sys},...msgs]} })
+    });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error.message);
+    return d.choices[0].message.content.trim();
+  }
+}
+
+function getSys() {
+  const un = localStorage.getItem('un')||'пользователь';
+  return {
+    claude: `Ты Claude — аналитик-скептик. Участвуешь в групповом чате с ${un} и GPT. Отвечай по-русски, 2-4 предложения. Указывай на риски конструктивно.`,
+    gpt: `Ты GPT — оптимист-прагматик. Участвуешь в групповом чате с ${un} и Claude. Отвечай по-русски, 2-4 предложения. Фокусируйся на возможностях. Не соглашайся автоматически с Claude.`
+  };
 }
 
 function addMsg(who, text, thinking=false) {
   document.getElementById('chat').querySelector('.empty-state')?.remove();
   const un = localStorage.getItem('un')||'Я';
-  const names = {me: un, claude:'Claude', gpt:'GPT'};
-  const inits = {me: un.charAt(0).toUpperCase()||'Я', claude:'C', gpt:'G'};
-  const el = document.createElement('div');
-  el.className = `msg ${who}`;
-  el.innerHTML = `<div class="m-av">${inits[who]}</div><div class="m-body"><div class="m-name">${names[who]}</div><div class="bubble${thinking?' thinking':''}">${text}</div></div>`;
+  const names={me:un,claude:'Claude',gpt:'GPT'};
+  const inits={me:un.charAt(0).toUpperCase()||'Я',claude:'C',gpt:'G'};
+  const el=document.createElement('div');
+  el.className=`msg ${who}`;
+  el.innerHTML=`<div class="m-av">${inits[who]}</div><div class="m-body"><div class="m-name">${names[who]}</div><div class="bubble${thinking?' thinking':''}">${text}</div></div>`;
   document.getElementById('chat').appendChild(el);
-  document.getElementById('chatWrap').scrollTop = 99999;
+  document.getElementById('chatWrap').scrollTop=99999;
   return el.querySelector('.bubble');
 }
-function addSystem(text, isErr=false) {
-  const el = document.createElement('div');
-  el.className = isErr ? 'err-msg' : 'system-msg';
-  el.textContent = text;
+function addSystem(text, err=false) {
+  const el=document.createElement('div');
+  el.className=err?'err-msg':'system-msg';
+  el.textContent=text;
   document.getElementById('chat').appendChild(el);
-  document.getElementById('chatWrap').scrollTop = 99999;
+  document.getElementById('chatWrap').scrollTop=99999;
 }
 
+// CHAT MODE
 async function sendMessage() {
-  if (busy) return;
-  const input = document.getElementById('msgInput');
-  const text = input.value.trim();
-  if (!text) return;
-  const pv = localStorage.getItem('pv')||'anthropic';
-  const ak = localStorage.getItem('ak')||'';
-  const ok = localStorage.getItem('ok')||'';
-  if (pv==='anthropic'&&!ak) { openSettings(); return; }
-  if (pv==='openai'&&!ok) { openSettings(); return; }
-
-  input.value = ''; input.style.height = 'auto';
-  busy = true; document.getElementById('sendBtn').disabled = true;
-
-  const un = localStorage.getItem('un')||'Пользователь';
-  addMsg('me', text);
-
-  const claudeSys = `Ты Claude — умный аналитик-скептик. Участвуешь в групповом чате с ${un} и GPT. Отвечай по-русски, 2-4 предложения. Указывай на риски, но конструктивно. Обращайся к ${un} по имени когда уместно.`;
-  const gptSys = `Ты GPT — оптимист-прагматик. Участвуешь в групповом чате с ${un} и Claude. Отвечай по-русски, 2-4 предложения. Фокусируйся на решениях. Можешь соглашаться или не соглашаться с Claude. Обращайся к ${un} по имени.`;
-  const call = pv==='anthropic' ? callAnthropic : callOpenAI;
-
-  claudeHistory.push({role:"user", content:`${un}: ${text}`});
-  gptHistory.push({role:"user", content:`${un}: ${text}`});
-
+  if(busy) return;
+  const input=document.getElementById('msgInput');
+  const text=input.value.trim();
+  if(!text) return;
+  input.value=''; input.style.height='auto';
+  busy=true; document.getElementById('sendBtn').disabled=true;
+  const un=localStorage.getItem('un')||'Пользователь';
+  addMsg('me',text);
+  const {claude:cSys,gpt:gSys}=getSys();
+  claudeHistory.push({role:'user',content:`${un}: ${text}`});
+  gptHistory.push({role:'user',content:`${un}: ${text}`});
   try {
-    if (mode==='auto'||mode==='claude') {
-      const cb = addMsg('claude','думает...',true);
-      const cr = await call(claudeSys, claudeHistory);
-      cb.textContent = cr; cb.classList.remove('thinking');
-      claudeHistory.push({role:"assistant", content:cr});
-      gptHistory.push({role:"user", content:`Claude: ${cr}`});
+    const cb=addMsg('claude','думает...',true);
+    const cr=await callAPI(cSys,claudeHistory);
+    cb.textContent=cr; cb.classList.remove('thinking');
+    claudeHistory.push({role:'assistant',content:cr});
+    gptHistory.push({role:'user',content:`Claude: ${cr}`});
+
+    const gb=addMsg('gpt','думает...',true);
+    const gr=await callAPI(gSys,gptHistory);
+    gb.textContent=gr; gb.classList.remove('thinking');
+    gptHistory.push({role:'assistant',content:gr});
+    claudeHistory.push({role:'user',content:`GPT: ${gr}`});
+  } catch(e) { addSystem('Ошибка: '+e.message,true); }
+  busy=false; document.getElementById('sendBtn').disabled=false;
+}
+
+// DEBATE MODE
+async function startDebate() {
+  if(debating) return;
+  const topic=document.getElementById('debateTopic').value.trim();
+  const rounds=parseInt(document.getElementById('rounds').value);
+  if(!topic) { alert('Введи тему'); return; }
+  debating=true; stopFlag=false;
+  document.getElementById('debateStartBtn').style.display='none';
+  document.getElementById('debateStopBtn').style.display='block';
+  addSystem(`— Дебаты: "${topic}" —`);
+  claudeHistory=[]; gptHistory=[];
+  const cSys=`Ты Claude — аналитик-скептик. Участвуешь в дебатах с GPT на тему: "${topic}". Отвечай по-русски, 2-3 предложения. Возражай, углубляй, не соглашайся автоматически.`;
+  const gSys=`Ты GPT — оптимист-прагматик. Участвуешь в дебатах с Claude на тему: "${topic}". Отвечай по-русски, 2-3 предложения. Возражай, развивай идею.`;
+  let lastGpt='';
+  try {
+    for(let r=1;r<=rounds;r++) {
+      if(stopFlag) break;
+      addSystem(`— Раунд ${r} —`);
+      const cQ=r===1?`Тема: "${topic}". Начни дебаты.`:`GPT сказал: "${lastGpt}". Ответь.`;
+      claudeHistory.push({role:'user',content:cQ});
+      const cb=addMsg('claude','думает...',true);
+      const cr=await callAPI(cSys,claudeHistory);
+      if(stopFlag){cb.textContent=cr;cb.classList.remove('thinking');break;}
+      cb.textContent=cr; cb.classList.remove('thinking');
+      claudeHistory.push({role:'assistant',content:cr});
+
+      if(stopFlag) break;
+      const gQ=`Claude сказал: "${cr}". Ответь.`;
+      gptHistory.push({role:'user',content:gQ});
+      const gb=addMsg('gpt','думает...',true);
+      lastGpt=await callAPI(gSys,gptHistory);
+      gb.textContent=lastGpt; gb.classList.remove('thinking');
+      gptHistory.push({role:'assistant',content:lastGpt});
+      claudeHistory.push({role:'user',content:`GPT: ${lastGpt}`});
     }
-    if (mode==='auto'||mode==='gpt') {
-      const gb = addMsg('gpt','думает...',true);
-      const gr = await call(gptSys, gptHistory);
-      gb.textContent = gr; gb.classList.remove('thinking');
-      gptHistory.push({role:"assistant", content:gr});
-      claudeHistory.push({role:"user", content:`GPT: ${gr}`});
-    }
-  } catch(e) {
-    addSystem('Ошибка: ' + e.message, true);
-  }
-  busy = false; document.getElementById('sendBtn').disabled = false;
-  input.focus();
+    addSystem(stopFlag?'— дебаты остановлены —':'— дебаты завершены —');
+  } catch(e) { addSystem('Ошибка: '+e.message,true); }
+  debating=false;
+  document.getElementById('debateStartBtn').style.display='block';
+  document.getElementById('debateStopBtn').style.display='none';
+}
+
+function stopDebate() { stopFlag=true; }
+
+function joinDebate() {
+  // Switch to chat mode to let user send a message into the debate
+  setMode('chat');
+  document.getElementById('msgInput').placeholder='Вмешайся в дебаты...';
+  document.getElementById('msgInput').focus();
+  addSystem('— ты вошёл в дебаты —');
 }
 </script>
 </body>
